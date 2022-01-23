@@ -149,10 +149,10 @@ public class RepeatingTrigger extends Trigger implements Runnable {
         public void onFail(Throwable throwable) {
             throwable.printStackTrace();
             TriggerReactorCore.getInstance().getLogger()
-                    .warning("Repeating Trigger [" + getInfo() + "] encountered an error!");
-            TriggerReactorCore.getInstance().getLogger().warning(throwable.getMessage());
+                    .warn("Repeating Trigger [" + getInfo() + "] encountered an error!");
+            TriggerReactorCore.getInstance().getLogger().warn(throwable.getMessage());
             TriggerReactorCore.getInstance().getLogger()
-                    .warning("If you are an administrator, see console for more details.");
+                    .warn("If you are an administrator, see console for more details.");
         }
     };
 }

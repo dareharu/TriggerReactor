@@ -56,7 +56,7 @@ public abstract class AbstractPlaceholderManager extends AbstractJavascriptBased
             builder.append(fileName);
 
             if (jsPlaceholders.containsKey(builder.toString())) {
-                plugin.getLogger().warning(builder.toString() + " already registered! Duplicating placeholders?");
+                plugin.getLogger().warn(builder.toString() + " already registered! Duplicating placeholders?");
             } else {
                 JSPlaceholder placeholder = new JSPlaceholder(fileName, getEngine(sem), file);
                 jsPlaceholders.put(builder.toString(), placeholder);

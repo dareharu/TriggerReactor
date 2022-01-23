@@ -49,7 +49,7 @@ public class ExecutorManager extends AbstractExecutorManager implements SpongeSc
                 reloadExecutors(file, filter);
             } catch (ScriptException | IOException e) {
                 e.printStackTrace();
-                plugin.getLogger().warning("Could not load executor " + file.getName());
+                plugin.getLogger().warn("Could not load executor " + file.getName());
                 continue;
             }
         }

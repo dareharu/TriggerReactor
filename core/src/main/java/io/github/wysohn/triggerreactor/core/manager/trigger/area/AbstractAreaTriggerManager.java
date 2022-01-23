@@ -148,7 +148,7 @@ public abstract class AbstractAreaTriggerManager extends AbstractTaggedTriggerMa
                         FileUtil.writeToFile(getTriggerFile(triggerFolder, "Enter", true), trigger.getEnterTrigger().getScript());
                     } catch (IOException e) {
                         e.printStackTrace();
-                        plugin.getLogger().warning("Could not save Area Trigger [Enter] " + trigger.getInfo());
+                        plugin.getLogger().warn("Could not save Area Trigger [Enter] " + trigger.getInfo());
                     }
                 }
 
@@ -157,7 +157,7 @@ public abstract class AbstractAreaTriggerManager extends AbstractTaggedTriggerMa
                         FileUtil.writeToFile(getTriggerFile(triggerFolder, "Exit", true), trigger.getExitTrigger().getScript());
                     } catch (IOException e) {
                         e.printStackTrace();
-                        plugin.getLogger().warning("Could not save Area Trigger [Exit] " + trigger.getInfo());
+                        plugin.getLogger().warn("Could not save Area Trigger [Exit] " + trigger.getInfo());
                     }
                 }
             }

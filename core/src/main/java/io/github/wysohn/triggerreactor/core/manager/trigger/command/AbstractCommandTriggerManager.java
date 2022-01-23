@@ -130,8 +130,8 @@ public abstract class AbstractCommandTriggerManager extends AbstractTriggerManag
 
         for (CommandTrigger trigger : getAllTriggers()) {
             if(!registerCommand(trigger.getInfo().getTriggerName(), trigger)){
-                plugin.getLogger().warning("Attempted to register command trigger "+trigger.getInfo()+" but failed.");
-                plugin.getLogger().warning("Probably, the command is already in use by another command trigger.");
+                plugin.getLogger().warn("Attempted to register command trigger "+trigger.getInfo()+" but failed.");
+                plugin.getLogger().warn("Probably, the command is already in use by another command trigger.");
             }
         }
 

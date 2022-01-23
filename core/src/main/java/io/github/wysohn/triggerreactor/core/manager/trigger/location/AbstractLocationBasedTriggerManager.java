@@ -67,9 +67,9 @@ public abstract class AbstractLocationBasedTriggerManager<T extends Trigger> ext
 
             if (locationMap.containsKey(sloc)) {
                 Trigger previous = locationMap.get(sloc);
-                plugin.getLogger().warning("Found a duplicating " + trigger.getClass().getSimpleName());
-                plugin.getLogger().warning("Existing: " + previous.getInfo().getSourceCodeFile().getAbsolutePath());
-                plugin.getLogger().warning("Skipped: " + trigger.getInfo().getSourceCodeFile().getAbsolutePath());
+                plugin.getLogger().warn("Found a duplicating " + trigger.getClass().getSimpleName());
+                plugin.getLogger().warn("Existing: " + previous.getInfo().getSourceCodeFile().getAbsolutePath());
+                plugin.getLogger().warn("Skipped: " + trigger.getInfo().getSourceCodeFile().getAbsolutePath());
             } else {
                 locationMap.put(sloc, trigger);
             }

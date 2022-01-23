@@ -65,7 +65,7 @@ public abstract class AbstractExecutorManager extends AbstractJavascriptBasedMan
             builder.append(fileName);
 
             if (jsExecutors.containsKey(builder.toString())) {
-                plugin.getLogger().warning(builder.toString() + " already registered! Duplicating executors?");
+                plugin.getLogger().warn(builder.toString() + " already registered! Duplicating executors?");
             } else {
                 JSExecutor exec = new JSExecutor(fileName, getEngine(sem), file);
                 jsExecutors.put(builder.toString(), exec);

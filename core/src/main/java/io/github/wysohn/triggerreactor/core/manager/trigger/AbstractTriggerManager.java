@@ -22,12 +22,11 @@ import io.github.wysohn.triggerreactor.core.manager.Manager;
 import io.github.wysohn.triggerreactor.core.script.warning.Warning;
 import io.github.wysohn.triggerreactor.tools.observer.IObservable;
 import io.github.wysohn.triggerreactor.tools.observer.IObserver;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public abstract class AbstractTriggerManager<T extends Trigger> extends Manager {
     private final Observer observer = new Observer();
@@ -67,7 +66,7 @@ public abstract class AbstractTriggerManager<T extends Trigger> extends Manager 
                 Optional.ofNullable(t)
                         .ifPresent(trigger -> {
                             if (has(info.getTriggerName())) {
-                                plugin.getLogger().warning(info + " is already registered! Duplicated Trigger?");
+                                plugin.getLogger().warn(info + " is already registered! Duplicated Trigger?");
                             } else {
                                 put(info.getTriggerName(), trigger);
                             }
@@ -158,8 +157,7 @@ public abstract class AbstractTriggerManager<T extends Trigger> extends Manager 
             return;
         }
 
-        Level L = Level.WARNING;
-        Logger log = TriggerReactorCore.getInstance().getLogger();
+        Logger logger = TriggerReactorCore.getInstance().getLogger();
         int numWarnings = warnings.size();
         String ww;
         if (numWarnings > 1) {
@@ -168,15 +166,15 @@ public abstract class AbstractTriggerManager<T extends Trigger> extends Manager 
             ww = "warning was";
         }
 
-        log.log(L, "===== " + warnings.size() + " " + ww + " found while loading trigger " +
+        logger.warn("===== " + warnings.size() + " " + ww + " found while loading trigger " +
                 trigger.getInfo() + " =====");
         for (Warning w : warnings) {
             for (String line : w.getMessageLines()) {
-                log.log(L, line);
+                logger.warn(line);
             }
-            log.log(Level.WARNING, "");
+            logger.warn("");
         }
-        log.log(Level.WARNING, "");
+        logger.warn("");
     }
 
     private class Observer implements IObserver {

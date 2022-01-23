@@ -42,7 +42,7 @@ public class PlaceholderManager extends AbstractPlaceholderManager implements Sp
                 reloadPlaceholders(file, filter);
             } catch (ScriptException | IOException e) {
                 e.printStackTrace();
-                plugin.getLogger().warning("Could not load placeholder " + file.getName());
+                plugin.getLogger().warn("Could not load placeholder " + file.getName());
                 continue;
             }
         }

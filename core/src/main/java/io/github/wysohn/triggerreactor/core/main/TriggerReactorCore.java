@@ -49,6 +49,7 @@ import io.github.wysohn.triggerreactor.tools.ScriptEditor.SaveHandler;
 import io.github.wysohn.triggerreactor.tools.TimeUtil;
 import io.github.wysohn.triggerreactor.tools.stream.SenderOutputStream;
 import io.github.wysohn.triggerreactor.tools.timings.Timings;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -57,7 +58,6 @@ import java.io.OutputStream;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
-import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
 /**
