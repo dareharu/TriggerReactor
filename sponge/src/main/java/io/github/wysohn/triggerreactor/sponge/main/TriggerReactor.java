@@ -211,9 +211,6 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
 
     private void initScriptEngine(ScriptEngineManager sem) {
         sem.put("plugin", this);
-        sem.put("TextUtil", TextUtil.class);
-
-        Sponge.getServer().getPlayer("asd").get().getLocation().getExtent().getEntities().stream().iterator()
 
         for (Entry<String, AbstractAPISupport> entry : this.getSharedVars().entrySet()) {
             sem.put(entry.getKey(), entry.getValue());
