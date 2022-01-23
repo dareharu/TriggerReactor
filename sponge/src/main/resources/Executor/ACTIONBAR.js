@@ -18,6 +18,7 @@
 var Player = Java.type('org.spongepowered.api.entity.living.player.Player');
 var ChatTypes = Java.type('org.spongepowered.api.text.chat.ChatTypes');
 var Sponge = Java.type('org.spongepowered.api.Sponge');
+var TextUtil = Java.type('io.github.wysohn.triggerreactor.sponge.tools.TextUtil')
 
 function ACTIONBAR(args) {
     var target, message;

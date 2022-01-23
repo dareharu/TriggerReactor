@@ -15,9 +15,9 @@
  *     You should have received a copy of the GNU General Public License
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
-var Sponge = Java.type('org.spongepowered.api.Sponge')
 var Player = Java.type('org.spongepowered.api.entity.living.player.Player')
 var Text = Java.type('org.spongepowered.api.text.Text')
+var Sponge = Java.type('org.spongepowered.api.Sponge')
 
 function CLEARCHAT(args) {
   var target
