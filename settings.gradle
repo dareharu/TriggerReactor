@@ -15,6 +15,6 @@ include 'api'
 include 'services:webservice'
 */
 
-rootProject.name = 'TriggerReactor'
+rootProject.name = 'TriggerReactorHaru'
 
-include 'core', /*'sponge',*/ 'bukkit', 'bukkit:legacy', 'bukkit:latest'
+include 'core', 'sponge'

@@ -62,7 +62,6 @@ import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import org.bstats.sponge.MetricsLite2;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockTypes;
 import org.spongepowered.api.command.CommandCallable;
@@ -132,9 +131,6 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
     static {
         System.setProperty("bstats.relocatecheck", "false");
     }
-
-    @Inject
-    private MetricsLite2 metrics;
 
     private Lag tpsHelper;
 
