@@ -18,13 +18,13 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-public class ExecutorManager extends AbstractExecutorManager implements SpongeScriptEngineInitializer {
+public class ExecutorManager extends AbstractExecutorManager {
     private static final String JAR_FOLDER_LOCATION = "Executor";
 
     private File executorFolder;
 
-    public ExecutorManager(TriggerReactorCore plugin) throws ScriptException, IOException {
-        super(plugin);
+    public ExecutorManager(TriggerReactorCore plugin, ScriptEngineManager sem) throws ScriptException, IOException {
+        super(plugin, sem);
         JarUtil.copyFolderFromJar(JAR_FOLDER_LOCATION, plugin.getDataFolder(), CopyOption.REPLACE_IF_EXIST, (original) -> {
             return original.substring(0, original.indexOf("!" + JarUtil.JAR_SEPARATOR)).replace("." + JarUtil.JAR_SEPARATOR, "");
         });
@@ -58,7 +58,7 @@ public class ExecutorManager extends AbstractExecutorManager implements SpongeSc
         this.jsExecutors.put("CMDOP", new Executor() {
 
             @Override
-            protected Integer execute(Timings.Timing timing, boolean sync, Map<String, Object> variables, Object e,
+            public Integer execute(Timings.Timing timing, Map<String, Object> variables, Object e,
                                       Object... args) throws Exception {
                 Object player = variables.get("player");
                 if (player == null || !(player instanceof Player))
@@ -82,12 +82,6 @@ public class ExecutorManager extends AbstractExecutorManager implements SpongeSc
     public void saveAll() {
         // TODO Auto-generated method stub
 
-    }
-
-    @Override
-    public void initScriptEngine(ScriptEngineManager sem) throws ScriptException {
-        super.initScriptEngine(sem);
-        SpongeScriptEngineInitializer.super.initScriptEngine(sem);
     }
 
     private class DispatchCommand implements Callable<Void> {

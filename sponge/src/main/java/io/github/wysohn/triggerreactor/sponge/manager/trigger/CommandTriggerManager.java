@@ -83,7 +83,7 @@ public class CommandTriggerManager extends AbstractCommandTriggerManager {
                 ITabCompleter tabCompleter = Optional.ofNullable(trigger.getTabCompleters())
                         .filter(iTabCompleters -> iTabCompleters.length >= args.length)
                         .map(iTabCompleters -> iTabCompleters[args.length - 1])
-                        .orElse(ITabCompleter.EMPTY);
+                        .orElse(ITabCompleter.Builder.of().build());
 
                 String partial = args[args.length - 1];
                 if (partial.length() < 1) { // show hint if nothing is entered yet

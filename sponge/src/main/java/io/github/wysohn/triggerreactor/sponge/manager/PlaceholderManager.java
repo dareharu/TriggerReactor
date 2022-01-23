@@ -11,13 +11,13 @@ import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 
-public class PlaceholderManager extends AbstractPlaceholderManager implements SpongeScriptEngineInitializer {
+public class PlaceholderManager extends AbstractPlaceholderManager {
     private static final String JAR_FOLDER_LOCATION = "Placeholder";
 
     private File placeholderFolder;
 
-    public PlaceholderManager(TriggerReactorCore plugin) throws ScriptException, IOException {
-        super(plugin);
+    public PlaceholderManager(TriggerReactorCore plugin, ScriptEngineManager sem) throws ScriptException, IOException {
+        super(plugin, sem);
         JarUtil.copyFolderFromJar(JAR_FOLDER_LOCATION, plugin.getDataFolder(), CopyOption.REPLACE_IF_EXIST, (original) -> {
             return original.substring(0, original.indexOf("!" + JarUtil.JAR_SEPARATOR)).replace("." + JarUtil.JAR_SEPARATOR, "");
         });
@@ -53,11 +53,4 @@ public class PlaceholderManager extends AbstractPlaceholderManager implements Sp
         // TODO Auto-generated method stub
 
     }
-
-    @Override
-    public void initScriptEngine(ScriptEngineManager sem) throws ScriptException {
-        super.initScriptEngine(sem);
-        SpongeScriptEngineInitializer.super.initScriptEngine(sem);
-    }
-
 }

@@ -111,7 +111,8 @@ import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.logging.Logger;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 @Plugin(id = TriggerReactor.ID)
 public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.TriggerReactorCore {
@@ -135,6 +136,7 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
         System.setProperty("bstats.relocatecheck", "false");
     }
 
+    private ScriptEngineManager sem;
     private Lag tpsHelper;
 
     private AbstractExecutorManager executorManager;
@@ -164,15 +166,24 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
         SYNC_EXECUTOR = Sponge.getScheduler().createSyncExecutor(this);
         WRAPPER = new SpongeWrapper();
 
+        sem = getScriptEngineManager();
         try {
-            executorManager = new ExecutorManager(this);
+            ScriptEngineInitializer.initScriptEngine(sem);
+            initScriptEngine(sem);
+        } catch (ScriptException e) {
+            initFailed(e);
+            return;
+        }
+
+        try {
+            executorManager = new ExecutorManager(this, sem);
         } catch (ScriptException | IOException e) {
             initFailed(e);
             return;
         }
 
         try {
-            placeholderManager = new PlaceholderManager(this);
+            placeholderManager = new PlaceholderManager(this, sem);
         } catch (ScriptException | IOException e) {
             initFailed(e);
             return;
@@ -198,10 +209,42 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
         Sponge.getScheduler().createTaskBuilder().execute(tpsHelper).delayTicks(100L).intervalTicks(1L).submit(this);
     }
 
+    private void initScriptEngine(ScriptEngineManager sem) {
+        sem.put("plugin", this);
+        sem.put("TextUtil", TextUtil.class);
+
+        Sponge.getServer().getPlayer("asd").get().getLocation().getExtent().getEntities().stream().iterator()
+
+        for (Entry<String, AbstractAPISupport> entry : this.getSharedVars().entrySet()) {
+            sem.put(entry.getKey(), entry.getValue());
+        }
+
+        sem.put("get", (Function<String, Object>) value -> getVariableManager().get(value));
+
+        sem.put("put", (BiFunction<String, Object, Void>) (key, value) -> {
+            if (!GlobalVariableManager.isValidName(key))
+                throw new RuntimeException("[" + key + "] cannot be used as key");
+
+            if (key != null && value == null) {
+                getVariableManager().remove(key);
+            } else {
+                try {
+                    getVariableManager().put(key, value);
+                } catch (Exception e) {
+                    throw new RuntimeException("Executor -- put(" + key + "," + value + ")", e);
+                }
+            }
+
+            return null;
+        });
+
+        sem.put("has", (Function<String, Boolean>) value -> getVariableManager().has(value));
+    }
+
     private void initFailed(Exception e) {
         e.printStackTrace();
-        getLogger().severe("Initialization failed!");
-        getLogger().severe(e.getMessage());
+        getLogger().error("Initialization failed!");
+        getLogger().error(e.getMessage());
         disablePlugin();
     }
 
@@ -442,6 +485,17 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
     @Override
     public SelfReference getSelfReference() {
         return selfReference;
+    }
+
+    public ScriptEngineManager getScriptEngineManager() {
+        if (sem == null
+            && Sponge.getServiceManager().isRegistered(ScriptEngineManager.class))
+            return Sponge.getServiceManager().provideUnchecked(ScriptEngineManager.class);
+
+        if (sem == null)
+            return new ScriptEngineManager();
+
+        return sem;
     }
 
     @Override
@@ -785,6 +839,79 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
         Sponge.getScheduler().createTaskBuilder().execute(runnable).submit(this);
     }
 
+    private ProcessInterrupter.Builder newInterrupterBuilder() {
+        return ProcessInterrupter.Builder.begin()
+            .perExecutor((context, command, args) -> {
+                if ("CALL".equalsIgnoreCase(command)) {
+                    if (args.length < 1)
+                        throw new RuntimeException("Need parameter [String] or [String, boolean]");
+
+                    if (args[0] instanceof String) {
+                        Trigger trigger = this.getNamedTriggerManager().get((String) args[0]);
+                        if (trigger == null)
+                            throw new RuntimeException("No trigger found for Named Trigger " + args[0]);
+
+                        boolean sync = true;
+                        if (args.length > 1 && args[1] instanceof Boolean) {
+                            sync = (boolean) args[1];
+                        }
+
+                        if (sync) {
+                            trigger.activate(context.getTriggerCause(), context.getVars(), true);
+                        } else {//use snapshot to avoid concurrent modification
+                            trigger.activate(context.getTriggerCause(), new HashMap<>(context.getVars()), false);
+                        }
+
+                        return true;
+                    } else {
+                        throw new RuntimeException("Parameter type not match; it should be a String."
+                            + " Make sure to put double quotes, if you provided String literal.");
+                    }
+                }
+
+                return false;
+            })
+            .perExecutor((context, command, args) -> {
+                if ("CANCELEVENT".equalsIgnoreCase(command)) {
+                    if(!this.isServerThread())
+                        throw new RuntimeException("Trying to cancel event in async trigger.");
+
+                    if (context.getTriggerCause() instanceof Cancellable) {
+                        ((Cancellable) context.getTriggerCause()).setCancelled(true);
+                        return true;
+                    } else {
+                        throw new RuntimeException(context.getTriggerCause() + " is not a Cancellable event!");
+                    }
+                }
+
+                return false;
+            });
+    }
+
+    private ProcessInterrupter.Builder appendCooldownInterrupter(ProcessInterrupter.Builder builder, Map<UUID, Long> cooldowns) {
+        return builder
+            .perExecutor(((context, command, args) -> {
+                if ("COOLDOWN".equalsIgnoreCase(command)) {
+                    if (!(args[0] instanceof Number))
+                        throw new RuntimeException(args[0] + " is not a number!");
+
+                    if (context instanceof Event) {
+                        ((Event) context).getCause().first(Player.class).ifPresent(player -> {
+                            long mills = (long) (((Number) args[0]).doubleValue() * 1000L);
+                            UUID uuid = player.getUniqueId();
+                            cooldowns.put(uuid, System.currentTimeMillis() + mills);
+                        });
+                    }
+                    return true;
+                }
+
+                return false;
+            }))
+            .perPlaceholder((context, placeholder, args) -> {
+                return null;
+            });
+    }
+
     private final Set<Class<? extends Manager>> savings = new HashSet<>();
 
     @Override
@@ -805,7 +932,7 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
                     getLogger().info("Saving Done!");
                 } catch (Exception e) {
                     e.printStackTrace();
-                    getLogger().warning("Failed to save " + manager.getClass().getSimpleName());
+                    getLogger().warn("Failed to save " + manager.getClass().getSimpleName());
                 } finally {
                     synchronized (savings) {
                         savings.remove(manager.getClass());
@@ -818,99 +945,21 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
     }
 
     @Override
-    public ProcessInterrupter createInterrupter(Object e, Interpreter interpreter, Map<UUID, Long> cooldowns) {
-        return new ProcessInterrupter() {
-            @Override
-            public boolean onNodeProcess(Node node) {
-                return false;
-            }
-
-            @Override
-            public boolean onCommand(Object context, String command, Object[] args) {
-                if ("CALL".equalsIgnoreCase(command)) {
-                    if (args.length < 1)
-                        throw new RuntimeException("Need parameter [String] or [String, boolean]");
-
-                    if (args[0] instanceof String) {
-                        Trigger trigger = getNamedTriggerManager().get((String) args[0]);
-                        if (trigger == null)
-                            throw new RuntimeException("No trigger found for Named Trigger " + args[0]);
-
-                        if (args.length > 1 && args[1] instanceof Boolean) {
-                            trigger.setSync((boolean) args[1]);
-                        } else {
-                            trigger.setSync(true);
-                        }
-
-                        if (trigger.isSync()) {
-                            trigger.activate(e, interpreter.getVars());
-                        } else {//use snapshot to avoid concurrent modification
-                            trigger.activate(e, new HashMap<>(interpreter.getVars()));
-                        }
-
-                        return true;
-                    } else {
-                        throw new RuntimeException("Parameter type not match; it should be a String."
-                                + " Make sure to put double quotes, if you provided String literal.");
-                    }
-                } else if ("CANCELEVENT".equalsIgnoreCase(command)) {
-                    if (!interpreter.isSync())
-                        throw new RuntimeException("CANCELEVENT is illegal in async mode!");
-
-                    if (context instanceof Cancellable) {
-                        ((Cancellable) context).setCancelled(true);
-                        return true;
-                    } else {
-                        throw new RuntimeException(context + " is not a Cancellable event!");
-                    }
-                } else if ("COOLDOWN".equalsIgnoreCase(command)) {
-                    if (!(args[0] instanceof Number))
-                        throw new RuntimeException(args[0] + " is not a number!");
-
-                    long mills = (long) (((Number) args[0]).doubleValue() * 1000L);
-                    if (e instanceof Event) {
-                        ((Event) e).getCause().first(Player.class).ifPresent((player) -> {
-                            UUID uuid = player.getUniqueId();
-                            cooldowns.put(uuid, System.currentTimeMillis() + mills);
-                        });
-                    }
-                    return true;
-                }
-
-                return false;
-            }
-
-            @Override
-            public Object onPlaceholder(Object context, String placeholder, Object[] args) {
-//                if("cooldown".equals(placeholder) && e instanceof Event){
-//                    Optional<Player> optPlayer = ((Event) e).getCause().first(Player.class);
-//                    if(optPlayer.isPresent()){
-//                        Player player = optPlayer.get();
-//                        long secondsLeft = Math.max(0L,
-//                                cooldowns.getOrDefault(player.getUniqueId(), 0L) - System.currentTimeMillis());
-//                        return secondsLeft / 1000;
-//                    }else{
-//                        return 0L;
-//                    }
-//                }else{
-//                    return null;
-//                }
-                return null;
-            }
-        };
+    public ProcessInterrupter createInterrupter(Map<UUID, Long> cooldowns) {
+        return appendCooldownInterrupter(newInterrupterBuilder(), cooldowns)
+            .build();
     }
 
     @Override
-    public ProcessInterrupter createInterrupterForInv(Object e, Interpreter interpreter, Map<UUID, Long> cooldowns,
+    public ProcessInterrupter createInterrupterForInv(Map<UUID, Long> cooldowns,
                                                       Map<IInventory, InventoryTrigger> inventoryMap) {
-        return new ProcessInterrupter() {
-            @Override
-            public boolean onNodeProcess(Node node) {
+        return appendCooldownInterrupter(newInterrupterBuilder(), cooldowns)
+            .perNode((context, node) -> {
                 //safety feature to stop all trigger immediately if executing on 'open' or 'click'
                 //  is still running after the inventory is closed.
-                if (e instanceof InteractInventoryEvent.Open
-                        || e instanceof InteractInventoryEvent.Close) {
-                    Inventory inv = ((InteractInventoryEvent) e).getTargetInventory();
+                if (context.getTriggerCause() instanceof InteractInventoryEvent.Open
+                    || context.getTriggerCause() instanceof InteractInventoryEvent.Close) {
+                    Inventory inv = ((InteractInventoryEvent) context.getTriggerCause()).getTargetInventory();
                     if (!(inv instanceof CarriedInventory))
                         return false;
 
@@ -925,81 +974,8 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
                 }
 
                 return false;
-            }
-
-            @Override
-            public boolean onCommand(Object context, String command, Object[] args) {
-                if ("CALL".equalsIgnoreCase(command)) {
-                    if (args.length < 1)
-                        throw new RuntimeException("Need parameter [String] or [String, boolean]");
-
-                    if (args[0] instanceof String) {
-                        Trigger trigger = getNamedTriggerManager().get((String) args[0]);
-                        if (trigger == null)
-                            throw new RuntimeException("No trigger found for Named Trigger " + args[0]);
-
-                        if (args.length > 1 && args[1] instanceof Boolean) {
-                            trigger.setSync((boolean) args[1]);
-                        } else {
-                            trigger.setSync(true);
-                        }
-
-                        if (trigger.isSync()) {
-                            trigger.activate(e, interpreter.getVars());
-                        } else {//use snapshot to avoid concurrent modification
-                            trigger.activate(e, new HashMap<>(interpreter.getVars()));
-                        }
-
-                        return true;
-                    } else {
-                        throw new RuntimeException("Parameter type not match; it should be a String."
-                                + " Make sure to put double quotes, if you provided String literal.");
-                    }
-                } else if ("CANCELEVENT".equalsIgnoreCase(command)) {
-                    if (!interpreter.isSync())
-                        throw new RuntimeException("CANCELEVENT is illegal in async mode!");
-
-                    if (context instanceof Cancellable) {
-                        ((Cancellable) context).setCancelled(true);
-                        return true;
-                    } else {
-                        throw new RuntimeException(context + " is not a Cancellable event!");
-                    }
-                } else if ("COOLDOWN".equalsIgnoreCase(command)) {
-                    if (!(args[0] instanceof Number))
-                        throw new RuntimeException(args[0] + " is not a number!");
-
-                    long mills = (long) (((Number) args[0]).doubleValue() * 1000L);
-                    if (e instanceof Event) {
-                        ((Event) e).getCause().first(Player.class).ifPresent((player) -> {
-                            UUID uuid = player.getUniqueId();
-                            cooldowns.put(uuid, System.currentTimeMillis() + mills);
-                        });
-                    }
-                    return true;
-                }
-
-                return false;
-            }
-
-            @Override
-            public Object onPlaceholder(Object context, String placeholder, Object[] args) {
-//                if("cooldown".equals(placeholder) && e instanceof Event){
-//                    Optional<Player> optPlayer = ((Event) e).getCause().first(Player.class);
-//                    if(optPlayer.isPresent()){
-//                        Player player = optPlayer.get();
-//                        long secondsLeft = Math.max(0L,
-//                                cooldowns.getOrDefault(player.getUniqueId(), 0L) - System.currentTimeMillis());
-//                        return secondsLeft / 1000;
-//                    }else{
-//                        return 0L;
-//                    }
-//                }else{
-//                    return null;
-//                }
-                return null;
-            }
-        };
+            })
+            .build();
     }
 
     @Override
