@@ -1129,6 +1129,26 @@ public class TemporarilyPrivilegedPlayer implements Player {
     }
 
     @Override
+    public Collection<String> getTags() {
+        return null;
+    }
+
+    @Override
+    public boolean addTag(String tag) {
+        return false;
+    }
+
+    @Override
+    public boolean removeTag(String tag) {
+        return false;
+    }
+
+    @Override
+    public boolean hasTag(String tag) {
+        return false;
+    }
+
+    @Override
     public Collection<DataManipulator<?, ?>> getContainers() {
         return player.getContainers();
     }
