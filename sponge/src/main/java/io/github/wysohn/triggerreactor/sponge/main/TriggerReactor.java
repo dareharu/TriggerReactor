@@ -484,6 +484,7 @@ public class TriggerReactor extends io.github.wysohn.triggerreactor.core.main.Tr
         return selfReference;
     }
 
+    @Override
     public ScriptEngineManager getScriptEngineManager() {
         if (sem == null
             && Sponge.getServiceManager().isRegistered(ScriptEngineManager.class))

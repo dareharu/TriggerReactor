@@ -51,6 +51,7 @@ import io.github.wysohn.triggerreactor.tools.stream.SenderOutputStream;
 import io.github.wysohn.triggerreactor.tools.timings.Timings;
 import org.slf4j.Logger;
 
+import javax.script.ScriptEngineManager;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -82,6 +83,8 @@ public abstract class TriggerReactorCore implements TaskSupervisor {
     }
 
     public abstract SelfReference getSelfReference();
+
+    public abstract ScriptEngineManager getScriptEngineManager();
 
     public abstract AbstractExecutorManager getExecutorManager();
 

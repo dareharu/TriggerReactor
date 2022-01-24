@@ -13,7 +13,7 @@ public interface ITriggerLoader<T extends Trigger> {
         return Optional.ofNullable(folder.listFiles())
                 .map(files -> Arrays.stream(files)
                         .filter(File::isFile)
-                        .filter(file -> file.getName().endsWith(".trg"))
+                        .filter(file -> file.getName().endsWith(".trg") || file.getName().endsWith(".js") || file.getName().endsWith(".mjs"))
                         .map(file -> {
                             String name = TriggerInfo.extractName(file);
                             IConfigSource config = fn.create(folder, name);

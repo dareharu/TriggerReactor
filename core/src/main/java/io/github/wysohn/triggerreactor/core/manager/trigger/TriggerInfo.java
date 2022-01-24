@@ -66,6 +66,10 @@ public abstract class TriggerInfo implements IMigratable {
         return triggerName;
     }
 
+    public String getExtension() {
+        return extractExtension(sourceCodeFile);
+    }
+
     public boolean isSync(){
         return Optional.ofNullable(config)
                 .flatMap(c -> c.get(KEY_SYNC))
@@ -98,7 +102,7 @@ public abstract class TriggerInfo implements IMigratable {
     }
 
     /**
-     * Check if the file has valid extension (.trg) or no extension.
+     * Check if the file has valid extension (.trg / .js / .mjs) or no extension.
      * No extension file is produced in old versions so have to be renamed accordingly.
      *
      * @param file the source code file to check
@@ -110,8 +114,8 @@ public abstract class TriggerInfo implements IMigratable {
 
         String name = file.getName();
 
-        //either ends with .trg or no extension
-        return name.endsWith(".trg") || name.indexOf('.') == -1;
+        //either ends with the followings: .trg, .js, .mjs or no extension
+        return name.endsWith(".trg") || name.endsWith(".js") || name.endsWith(".mjs") || name.indexOf('.') == -1;
     }
 
     /**
@@ -128,6 +132,16 @@ public abstract class TriggerInfo implements IMigratable {
             return file.getName();
 
         return file.getName().substring(0, file.getName().indexOf('.'));
+    }
+
+    public static String extractExtension(File file) {
+        if (file.isDirectory())
+            return null;
+
+        if (file.getName().indexOf('.') == -1)
+            return null;
+
+        return file.getName().substring(file.getName().lastIndexOf('.'));
     }
 
     @Override

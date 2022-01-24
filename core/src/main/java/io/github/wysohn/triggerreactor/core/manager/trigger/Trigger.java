@@ -2,6 +2,7 @@ package io.github.wysohn.triggerreactor.core.manager.trigger;
 
 import io.github.wysohn.triggerreactor.core.bridge.entity.IPlayer;
 import io.github.wysohn.triggerreactor.core.main.TriggerReactorCore;
+import io.github.wysohn.triggerreactor.core.manager.AbstractJavascriptBasedManager;
 import io.github.wysohn.triggerreactor.core.manager.trigger.AbstractTriggerManager.TriggerInitFailedException;
 import io.github.wysohn.triggerreactor.core.script.interpreter.Executor;
 import io.github.wysohn.triggerreactor.core.script.interpreter.Interpreter;
@@ -19,13 +20,11 @@ import io.github.wysohn.triggerreactor.tools.observer.IObservable;
 import io.github.wysohn.triggerreactor.tools.observer.IObserver;
 import io.github.wysohn.triggerreactor.tools.timings.Timings;
 
+import javax.script.*;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 
 public abstract class Trigger implements Cloneable, IObservable {
@@ -35,6 +34,10 @@ public abstract class Trigger implements Cloneable, IObservable {
     protected IObserver observer;
 
     protected String script;
+
+    protected ScriptEngine engine = null;
+    protected CompiledScript compiled = null;
+
     protected Node root;
     protected Map<String, Executor> executorMap;
     protected Map<String, Placeholder> placeholderMap;
@@ -50,6 +53,12 @@ public abstract class Trigger implements Cloneable, IObservable {
         super();
         this.info = info;
         this.script = script;
+
+        if (".js".equals(info.getExtension()) || ".mjs".equals(info.getExtension())) {
+            ScriptEngineManager sem = TriggerReactorCore.getInstance().getScriptEngineManager();
+
+            this.engine = AbstractJavascriptBasedManager.getEngine(sem);
+        }
 
         ValidationUtil.notNull(this.info);
     }
@@ -88,6 +97,16 @@ public abstract class Trigger implements Cloneable, IObservable {
             if (script == null) {
                 throw new NullPointerException("init() was invoked, yet 'script' was null. Make sure to override " +
                         "init() method to in order to construct a customized Trigger.");
+            }
+
+            // Do not parse script file, while it would be parse with JavaScript engine.
+            if (".js".equals(info.getExtension()) || ".mjs".equals(info.getExtension())) {
+                synchronized (this.engine) {
+                    this.engine.getContext().setAttribute(ScriptEngine.FILENAME, info.getSourceCodeFile().getName(), ScriptContext.ENGINE_SCOPE);
+                    compiled = ((Compilable) this.engine).compile(script);
+                }
+
+                return;
             }
 
             Charset charset = StandardCharsets.UTF_8;
@@ -150,9 +169,13 @@ public abstract class Trigger implements Cloneable, IObservable {
         if (customVars != null)
             scriptVars.putAll(customVars);
 
-        Interpreter interpreter = initInterpreter(scriptVars);
+        if (".js".equals(info.getExtension()) || ".mjs".equals(info.getExtension())) {
+            startEvaluation(e, scriptVars, engine, sync);
+        } else {
+            Interpreter interpreter = initInterpreter(scriptVars);
 
-        startInterpretation(e, scriptVars, interpreter, sync);
+            startInterpretation(e, scriptVars, interpreter, sync);
+        }
         return true;
     }
 
@@ -248,6 +271,50 @@ public abstract class Trigger implements Cloneable, IObservable {
                     TriggerReactorCore.getInstance().handleException(e, new RuntimeException(
                             "Took too long to process Trigger [" + info + "]! Is the server lagging?",
                             e1));
+                }
+            }
+        } else {
+            ASYNC_POOL.submit(call);
+        }
+    }
+
+    protected void startEvaluation(Object e, Map<String, Object> scriptVars, ScriptEngine engine, boolean sync) {
+        Callable<Void> call = () -> {
+            try (Timings.Timing t = Timings.getTiming(getTimingId()).begin(sync)) {
+                final ScriptContext scriptContext = new SimpleScriptContext();
+                final Bindings bindings = engine.createBindings();
+                bindings.putAll(scriptVars);
+
+                scriptContext.setAttribute(ScriptEngine.FILENAME, info.getSourceCodeFile().getName(), ScriptContext.ENGINE_SCOPE);
+                scriptContext.setBindings(bindings, ScriptContext.ENGINE_SCOPE);
+                scriptContext.setBindings(engine.getBindings(ScriptContext.GLOBAL_SCOPE),
+                    ScriptContext.GLOBAL_SCOPE);
+
+                compiled.eval(scriptContext);
+            } catch (Exception ex) {
+                TriggerReactorCore.getInstance().handleException(e, new Exception(
+                    "Trigger [" + info + "] produced an error!", ex));
+            }
+            return null;
+        };
+
+        if (sync) {
+            if (TriggerReactorCore.getInstance().isServerThread()) {
+                try {
+                    call.call();
+                } catch (Exception e1) {
+
+                }
+            } else {
+                Future<Void> future = TriggerReactorCore.getInstance().callSyncMethod(call);
+                try {
+                    future.get(3, TimeUnit.SECONDS);
+                } catch (InterruptedException | ExecutionException e1) {
+
+                } catch (TimeoutException e1) {
+                    TriggerReactorCore.getInstance().handleException(e, new RuntimeException(
+                        "Took too long to process Trigger [" + info + "]! Is the server lagging?",
+                        e1));
                 }
             }
         } else {
