@@ -16,37 +16,42 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
 var Keys = Java.type('org.spongepowered.api.data.key.Keys')
+var Entity = Java.type('org.spongepowered.api.entity.Entity')
 var Sponge = Java.type('org.spongepowered.api.Sponge')
 var Integer = Java.type('java.lang.Integer')
 
+var DAY_OF_SECONDS = 5184000
+
+validation = {
+  overloads: [
+    [{ name: 'seconds', type: 'int', minimum: 0, maximum: DAY_OF_SECONDS }],
+    [
+      { name: 'target', type: 'string' },
+      { name: 'seconds', type: 'int', minimum: 0, maximum: DAY_OF_SECONDS }
+    ],
+    [
+      { name: 'target', type: Entity.Class },
+      { name: 'seconds', type: 'int', minimum: 0, maximum: DAY_OF_SECONDS }
+    ]
+  ]
+}
+
 function BURN(args) {
-  var target, seconds
+  var target = player,
+    seconds
 
-  if (args.length === 1) {
-    if (typeof args[0] !== 'number') {
-      throw new Error('Invalid number for seconds to burn: ' + args[0])
-    } else if (args[0] < 0) {
-      throw new Error('The number of seconds to burn should be positive')
-    }
-
-    target = player
-    seconds = Math.min(args[0] * 20, Integer.MAX_VALUE)
-  } else if (args.length === 2) {
+  if (overload === 0) {
+    seconds = args[0] * 20
+  } else if (overload === 1 || overload === 2) {
+    target = Sponge.getServer().getPlayer(target).orElse(null)
+    seconds = args[1] * 20
+  } else if (overload === 2) {
     target = args[0]
+    seconds = args[1] * 20
+  }
 
-    if (typeof args[0] === 'string') {
-      target = Sponge.getServer().getPlayer(target).orElse(null)
-    }
-
-    if (target === null) {
-      throw new Error('Player to burn does not exist.')
-    } else if (typeof args[1] !== 'number') {
-      throw new Error('Invalid number for seconds to burn: ' + target.getName())
-    } else if (args[1] < 0) {
-      throw new Error('The number of seconds to burn should be positive.')
-    }
-  } else {
-    throw new Error('Invalid parameters. Need [Number] or [Entity or String, Number]')
+  if (!target) {
+    throw new Error('Player to burn does not exist.')
   }
 
   target.offer(Keys.FIRE_TICKS, Math.round(seconds))

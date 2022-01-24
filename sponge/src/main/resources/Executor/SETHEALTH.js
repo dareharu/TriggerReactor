@@ -17,6 +17,7 @@
  *******************************************************************************/
 var Keys = Java.type('org.spongepowered.api.data.key.Keys')
 var ValueContainer = Java.type('org.spongepowered.api.data.value.ValueContainer')
+var Double = Java.type('java.lang.Double')
 
 validation = {
   overloads: [[{ name: 'health', type: 'number', minimum: 0, maximum: 20 }]]
@@ -25,10 +26,6 @@ validation = {
 function SETHEALTH(args) {
   if (overload === 0) {
     var health = args[0]
-
-    if (health < 0) {
-      throw new Error('Argument for Exector SETHEALTH should not be negative')
-    }
 
     if (!(player instanceof ValueContainer)) {
       throw new Error('Value in player does not support health (did you set it to something else?)')
@@ -48,9 +45,7 @@ function SETHEALTH(args) {
       )
     }
 
-    health *= 1.0 //cast arg to double
-
-    player.offer(Keys.HEALTH, health)
+    player.offer(Keys.HEALTH, Double.parseDouble(health))
     return null
   }
 }
