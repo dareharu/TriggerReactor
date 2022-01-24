@@ -46,6 +46,9 @@ public class CommandTriggerManager extends AbstractCommandTriggerManager {
 
     @Override
     protected boolean registerCommand(String triggerName, CommandTrigger trigger) {
+        if (commandManager.get(triggerName).isPresent())
+            return false;
+
         String[] commandArr = new String[1 + trigger.getAliases().length];
         commandArr[0] = triggerName;
         for (int i = 1; i < commandArr.length; i++)
@@ -117,7 +120,7 @@ public class CommandTriggerManager extends AbstractCommandTriggerManager {
                 return null;
             }
         }, commandArr).ifPresent(commandMapping -> mappings.put(triggerName, commandMapping));
-        return false;
+        return true;
     }
 
     @Override
