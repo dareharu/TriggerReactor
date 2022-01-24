@@ -16,12 +16,12 @@
  *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *******************************************************************************/
 var MessageChannel = Java.type('org.spongepowered.api.text.channel.MessageChannel')
-var Text = Java.type('org.spongepowered.api.text.Text');
-var Sponge = Java.type('org.spongepowered.api.Sponge');
+var Text = Java.type('org.spongepowered.api.text.Text')
+var Sponge = Java.type('org.spongepowered.api.Sponge')
+var TextUtil = Java.type('io.github.wysohn.triggerreactor.sponge.tools.TextUtil')
+var String = Java.type('java.lang.String')
 
 function BROADCAST(args) {
-  var String = Java.type('java.lang.String');
-
   for (var i = 0; i < args.length; i++) {
     var message;
     if (args[i] instanceof Text) {
